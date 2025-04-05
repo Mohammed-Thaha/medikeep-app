@@ -1,75 +1,85 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
   StyleSheet,
   Modal,
   Pressable,
   Platform,
   StatusBar,
+  ScrollView,
+  Animated,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 const HomeScreen = () => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const navigation = useNavigation();
 
-  const doctors = [
-    {
-      id: "1",
-      name: "Dr. John Doe",
-      specialty: "Cardiologist",
-      hospital: "Apollo Hospital",
-    },
-    {
-      id: "2",
-      name: "Dr. Jane Smith",
-      specialty: "Neurologist",
-      hospital: "Fortis Healthcare",
-    },
-    {
-      id: "3",
-      name: "Dr. Emily White",
-      specialty: "Dermatologist",
-      hospital: "AIIMS",
-    },
-    {
-      id: "4",
-      name: "Dr. Alex Brown",
-      specialty: "Orthopedic",
-      hospital: "Max Hospital",
-    },
-    {
-      id: "5",
-      name: "Dr. Sarah Johnson",
-      specialty: "Pediatrician",
-      hospital: "Columbia Asia",
-    },
-    {
-      id: "6",
-      name: "Dr. Michael Lee",
-      specialty: "ENT Specialist",
-      hospital: "Manipal Hospital",
-    },
-    {
-      id: "7",
-      name: "Dr. Rachel Green",
-      specialty: "Ophthalmologist",
-      hospital: "Shankar Netralaya",
-    },
-    {
-      id: "8",
-      name: "Dr. David Wilson",
-      specialty: "General Physician",
-      hospital: "Medanta Hospital",
-    },
+  const screenList = [
+    { name: "Dashboard", icon: "📊", desc: "Your health at a glance" },
+    { name: "Medications", icon: "💊", desc: "Track your meds and doses" },
+    { name: "Doctors", icon: "👨‍⚕️", desc: "Your saved doctors" },
+    { name: "Appointments", icon: "📅", desc: "Upcoming checkups" },
+    { name: "Reminders", icon: "⏰", desc: "Health alerts" },
+    { name: "Reports", icon: "🧾", desc: "View your health summaries" },
   ];
+  const animations = useRef(screenList.map(() => new Animated.Value(1))).current;
 
-  const filteredDoctors = doctors.filter((doctor) =>
-    doctor.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handlePressIn = (index) => {
+    Animated.spring(animations[index], {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = (index) => {
+    Animated.spring(animations[index], {
+      toValue: 1,
+      friction: 4,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const getCardStyle = (screen) => {
+    switch (screen) {
+      case "Dashboard":
+        return {
+          borderLeftColor: "#2F80ED",
+          backgroundColor: "#E3F2FD",
+        };
+      case "Medications":
+        return {
+          borderLeftColor: "#66BB6A",
+          backgroundColor: "#E8F5E9",
+        };
+      case "Doctors":
+        return {
+          borderLeftColor: "#FFB74D",
+          backgroundColor: "#FFF3E0",
+        };
+      case "Appointments":
+        return {
+          borderLeftColor: "#BA68C8",
+          backgroundColor: "#F3E5F5",
+        };
+      case "Reminders":
+        return {
+          borderLeftColor: "#4DD0E1",
+          backgroundColor: "#E0F7FA",
+        };
+      case "Reports":
+        return {
+          borderLeftColor: "#EF5350",
+          backgroundColor: "#FFEBEE",
+        };
+      default:
+        return {};
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -83,15 +93,26 @@ const HomeScreen = () => {
         >
           <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
-        <TextInput
-          style={styles.searchBar}
-          placeholder="Search doctors..."
-          value={searchQuery}
-          onChangeText={(text) => setSearchQuery(text)}
-        />
+
+        <View style={styles.searchSection}>
+          <TextInput
+            style={styles.searchBar}
+            placeholder="Search..."
+            value={searchQuery}
+            onChangeText={(text) => setSearchQuery(text)}
+          />
+
+          {/* Profile Icon */}
+          <TouchableOpacity
+            style={styles.profileIconContainer}
+            onPress={() => navigation.navigate("Settings")} // Replace with your actual profile screen
+          >
+            <Text style={styles.profileIcon}>👤</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Full-Screen Navbar */}
+      {/* Menu Modal */}
       <Modal visible={menuVisible} animationType="slide" transparent={true}>
         <View style={styles.navbar}>
           <Pressable
@@ -100,27 +121,51 @@ const HomeScreen = () => {
           >
             <Text style={styles.closeText}>✖</Text>
           </Pressable>
-          <Text style={styles.navItem}>Dashboard</Text>
-          <Text style={styles.navItem}>My Medications</Text>
-          <Text style={styles.navItem}>Doctors</Text>
-          <Text style={styles.navItem}>Appointments</Text>
-          <Text style={styles.navItem}>Reminders</Text>
-          <Text style={styles.navItem}>Settings</Text>
+
+          {screenList.map(({ name }) => (
+            <Text
+              key={name}
+              style={styles.navItem}
+              onPress={() => {
+                setMenuVisible(false);
+                navigation.navigate(name);
+              }}
+            >
+              {name === "Medications" ? "My Medications" : name}
+            </Text>
+          ))}
         </View>
       </Modal>
 
-      {/* Doctor List */}
-      <FlatList
-        data={filteredDoctors}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            <Text style={styles.cardSpecialty}>{item.specialty}</Text>
-            <Text style={styles.cardHospital}>{item.hospital}</Text>
-          </View>
-        )}
-      />
+      {/* Square Cards */}
+      <ScrollView contentContainerStyle={styles.grid}>
+        {screenList.map((screen, index) => {
+          const scaleStyle = {
+            transform: [{ scale: animations[index] }],
+          };
+          return (
+            <Animated.View
+              key={screen.name}
+              style={[styles.cardWrapper, scaleStyle]}
+            >
+              <TouchableOpacity
+                onPress={() => navigation.navigate(screen.name)}
+                onPressIn={() => handlePressIn(index)}
+                onPressOut={() => handlePressOut(index)}
+                style={[styles.card, getCardStyle(screen.name)]}
+              >
+                <Text style={styles.icon}>{screen.icon}</Text>
+                <Text style={styles.cardTitle}>
+                  {screen.name === "Medications"
+                    ? "My Medications"
+                    : screen.name}
+                </Text>
+                <Text style={styles.cardDesc}>{screen.desc}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 };
@@ -128,15 +173,14 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
-    paddingHorizontal: 20,
+    backgroundColor: "#f0f4f8",
     paddingTop: Platform.OS === "ios" ? 50 : 20,
   },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   menuButton: {
     padding: 10,
@@ -144,21 +188,39 @@ const styles = StyleSheet.create({
   menuIcon: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#91B4FF",
+    color: "#2F80ED",
+  },
+  searchSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginLeft: 10,
   },
   searchBar: {
     flex: 1,
     height: 45,
-    borderColor: "#ccc",
+    borderColor: "#d0d7de",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 15,
-    backgroundColor: "white",
-    marginLeft: 10,
+    backgroundColor: "#ffffff",
+    fontSize: 16,
+  },
+  profileIconContainer: {
+    marginLeft: 8,
+    padding: 8,
+    backgroundColor: "#E3F2FD",
+    borderRadius: 50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  profileIcon: {
+    fontSize: 20,
+    color: "#2F80ED",
   },
   navbar: {
     flex: 1,
-    backgroundColor: "#91B4FF",
+    backgroundColor: "#2F80ED",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -169,41 +231,55 @@ const styles = StyleSheet.create({
     right: 30,
   },
   closeText: {
-    fontSize: 24,
-    color: "white",
+    fontSize: 26,
+    color: "#fff",
   },
   navItem: {
-    color: "white",
+    color: "#fff",
     fontSize: 22,
     paddingVertical: 15,
-    fontWeight: "bold",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-around",
+    paddingBottom: 20,
+  },
+  cardWrapper: {
+    width: "45%",
+    aspectRatio: 1,
+    marginBottom: 20,
   },
   card: {
-    backgroundColor: "#ffffff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    flex: 1,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 10,
     borderLeftWidth: 5,
-    borderLeftColor: "#91B4FF",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  icon: {
+    fontSize: 36,
+    marginBottom: 10,
   },
   cardTitle: {
     fontWeight: "bold",
-    fontSize: 18,
-    color: "#91B4FF",
-    marginBottom: 3,
-  },
-  cardSpecialty: {
     fontSize: 16,
-    color: "#343A40",
+    color: "#333",
+    marginBottom: 4,
+    textAlign: "center",
   },
-  cardHospital: {
-    fontSize: 14,
-    color: "#6C757D",
+  cardDesc: {
+    fontSize: 13,
+    color: "#666",
+    textAlign: "center",
   },
 });
 
