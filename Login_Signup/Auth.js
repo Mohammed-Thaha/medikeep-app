@@ -13,8 +13,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 
 const dummyUser = {
-  email: 'user@example.com',
-  password: 'password123',
+  email: 'thaha@gmail.com',
+  password: '123',
 };
 
 const Auth = () => {
